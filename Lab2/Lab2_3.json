@@ -1,0 +1,75 @@
+{
+  "name": "Lab2-3",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "ฟอร์ม",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "name",
+              "placeholder": "ชื่อ"
+            },
+            {
+              "fieldLabel": "age",
+              "fieldType": "number",
+              "placeholder": "อายุ"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b1859f85-c140-4270-94bc-ab74c8c4ea1b",
+      "name": "On form submission",
+      "webhookId": "e18d3a43-8915-4a31-bb63-3df5bed68628"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:5678/webhook/users",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.name }}\",\n  \"age\": \"{{ $json.age }}\"\n} ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "eef13f1c-fdf8-4a7f-882f-b001e2c3b865",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9bd775b7-fc30-4049-ad6d-5aa5ca841a26",
+  "meta": {
+    "instanceId": "2d732dbc38cf7921ff0fc622522c0abdbb197ed0a07ff8e0455831663b6d9b8f"
+  },
+  "id": "Wokc3u870IGSuBBo",
+  "tags": []
+}
