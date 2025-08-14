@@ -1,0 +1,437 @@
+{
+  "name": "Lab 3-2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8b23cb02-4e7d-4805-a055-a07a59a45334",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1rwggfrZkjkN8ZxyWn9uc8cPQ8W_PrximQ5AFfAWIyM8",
+          "mode": "list",
+          "cachedResultName": "n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rwggfrZkjkN8ZxyWn9uc8cPQ8W_PrximQ5AFfAWIyM8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1382364422,
+          "mode": "list",
+          "cachedResultName": "ชีต2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rwggfrZkjkN8ZxyWn9uc8cPQ8W_PrximQ5AFfAWIyM8/edit#gid=1382364422"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        220,
+        0
+      ],
+      "id": "b6ad4df6-4a05-4902-aac5-b07d468001e2",
+      "name": "Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "APii8icV9iyYkPsp",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"User-Agent\":\n  \"Mozilla/5.0\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        0
+      ],
+      "id": "ef551099-60fa-4c5e-acd2-b96afe22b7d0",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $input.first().json.data;\n\n\nconst match = html.match(/var ytInitialData = (.*?);\\s*<\\/script>/s);\nif (!match) {\n  return [{ json: { error: \"ytInitialData not found\" } }];\n}\n\nlet data;\ntry {\n  data = JSON.parse(match[1]);\n} catch (err) {\n  return [{ json: { error: \"Invalid JSON\", details: err.message } }];\n}\n\nlet title = null;\nlet description = null;\n\n\ntry {\n  const contents = data.contents.twoColumnWatchNextResults.results.results.contents;\n  const videoPrimaryInfo = contents.find(c => c.videoPrimaryInfoRenderer);\n  title = videoPrimaryInfo.videoPrimaryInfoRenderer.title.runs[0].text;\n} catch (e) {\n  title = null;\n}\n\n\nfunction findAttributedDescription(obj) {\n  if (typeof obj !== 'object' || obj === null) return null;\n\n  if (obj.attributedDescription && obj.attributedDescription.content) {\n    return obj.attributedDescription.content;\n  }\n\n  for (const key in obj) {\n    const result = findAttributedDescription(obj[key]);\n    if (result) return result;\n  }\n\n  return null;\n}\n\ndescription = findAttributedDescription(data);\n\nreturn [{\n  json: {\n    title,\n    description\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        0
+      ],
+      "id": "f35df1e6-3084-4d0d-85a7-4b4bbbe0f0f2",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=คุณเป็น YouTube SEO มืออาชีพ\nเปลี่ยนชื่อคลิปจาก {{ $json.description }} ให้มีผู้เข้าชมมากขึ้น\nส่งผลลัพธ์กลับมาเฉพาะในรูปแบบ JSON เท่านั้น โดยมีโครงสร้างดังนี้:\n{\n \"des_old\": \"\",\n \"des_new\": \"\"\n}\n\nเอา \\n และ ่json ออก",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1060,
+        220
+      ],
+      "id": "4ac80da8-f6a1-4143-baa7-49df01973741",
+      "name": "Basic LLM Chain1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=คุณเป็น YouTube SEO มืออาชีพ\nเปลี่ยนชื่อคลิปจาก {{ $json.title }} ให้มีผู้เข้าชมมากขึ้น\nส่งผลลัพธ์กลับมาเฉพาะในรูปแบบ JSON เท่านั้น โดยมีโครงสร้างดังนี้:\n{\n \"title_old\": \"\",\n \"title_new\": \"\"\n}\nเอา \\n และ ่json ออก",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        960,
+        -140
+      ],
+      "id": "fefea701-72c5-47f2-9937-59f5b4cc06a4",
+      "name": "New title"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        700,
+        280
+      ],
+      "id": "58122a3f-c9d0-4e78-8854-e903300dbe40",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "kqQECQ7qzvwudIjD",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = items[0].json.text;\n\n\nconst parsed = JSON.parse(rawText);\n\n\nreturn [{ json: parsed }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        -140
+      ],
+      "id": "f687558f-40de-43a7-a737-81c810c9081d",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rawText = items[0].json.text;\n\n\nconst parsed = JSON.parse(rawText);\n\n\nreturn [{ json: parsed }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1480,
+        220
+      ],
+      "id": "53faaae3-6854-4a03-ab71-4b7dc803a2e0",
+      "name": "Code2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1940,
+        20
+      ],
+      "id": "3ce704c9-e5f0-4b0a-b75f-7932bb319c9c",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2180,
+        20
+      ],
+      "id": "78dd5e28-82dc-4576-85ac-a0895e21ed65",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1rwggfrZkjkN8ZxyWn9uc8cPQ8W_PrximQ5AFfAWIyM8",
+          "mode": "list",
+          "cachedResultName": "n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rwggfrZkjkN8ZxyWn9uc8cPQ8W_PrximQ5AFfAWIyM8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1382364422,
+          "mode": "list",
+          "cachedResultName": "ชีต2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1rwggfrZkjkN8ZxyWn9uc8cPQ8W_PrximQ5AFfAWIyM8/edit#gid=1382364422"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "url": "={{ $('Google Sheets').item.json.url }}",
+            "title_old": "={{ $json.data[0].title_old }}",
+            "title_new": "={{ $json.data[0].title_new }}",
+            "des_old": "={{ $json.data[1].des_old }}",
+            "des_new": "={{ $json.data[1].des_new }}"
+          },
+          "matchingColumns": [
+            "url"
+          ],
+          "schema": [
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title_old",
+              "displayName": "title_old",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "des_old",
+              "displayName": "des_old",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "title_new",
+              "displayName": "title_new",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "des_new",
+              "displayName": "des_new",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        2400,
+        20
+      ],
+      "id": "9842d269-46fb-4543-9b09-81bc2667be5e",
+      "name": "Google Sheets1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "APii8icV9iyYkPsp",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "New title",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "New title",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Basic LLM Chain1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New title": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain1": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets1": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "18d72ca7-6100-469e-a562-ae0488ee4410",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a839bafd58d79510da4d82085b815701590572d2080e9fbd737555bd0708cbb4"
+  },
+  "id": "9UluaxteLoUqKyzd",
+  "tags": []
+}
