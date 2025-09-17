@@ -1,10 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  VehicleCountResponse,
-  CameraData,
-} from "./lib/vehicleCount";
+import { useState, useEffect, useMemo } from "react";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -16,14 +12,28 @@ import {
   Legend,
 } from "chart.js";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+
+interface VehicleDetail {
+  vehicle_type_id: number;
+  vehicle_type_name: string;
+  direction_type_id: number;
+  direction_type_name: string;
+  count: number;
+}
+
+interface CameraData {
+  gate_id: number;
+  camera_id: number;
+  start: string;
+  stop: string;
+  details: VehicleDetail[];
+}
+
+interface VehicleCountResponse {
+  data: CameraData[];
+}
+
 export default function VehicleDashboard() {
   const today = new Date().toISOString().slice(0, 10);
   const [startDate, setStartDate] = useState<string>(today);
@@ -31,30 +41,91 @@ export default function VehicleDashboard() {
   const [data, setData] = useState<CameraData[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
 
-  // Mock สำหรับ table และ pagination (ป้องกัน error)
-  const paginatedRows: any[] = [];
-  const allRows: any[] = [];
-  const totalPages = 1;
-  const currentPage = 1;
-  const setCurrentPage = (fn: any) => {};
+  // แปลงข้อมูลสำหรับตาราง
+  const allRows = useMemo(() => {
+    return data.flatMap(camera => 
+      camera.details.map(detail => ({
+        camera_id: camera.camera_id,
+        gate_id: camera.gate_id,
+        vehicle_type_id: detail.vehicle_type_id,
+        vehicle_type_name: detail.vehicle_type_name,
+        direction_type_id: detail.direction_type_id,
+        direction_type_name: detail.direction_type_name,
+        count: detail.count
+      }))
+    );
+  }, [data]);
 
-  // Mock chart data
-  const chartData = {
-    labels: ["รถยนต์", "จักรยานยนต์", "รถบัส"],
-    datasets: [
-      {
-        label: "เข้า",
-        data: [10, 20, 5],
-        backgroundColor: "#3b82f6",
-      },
-      {
-        label: "ออก",
-        data: [8, 15, 3],
-        backgroundColor: "#ef4444",
-      },
-    ],
-  };
+  // Pagination settings
+  const rowsPerPage = 10;
+  const totalPages = Math.ceil(allRows.length / rowsPerPage);
+
+  // ข้อมูลสำหรับหน้าปัจจุบัน
+  const paginatedRows = useMemo(() => {
+    return allRows.slice(
+      (currentPage - 1) * rowsPerPage,
+      currentPage * rowsPerPage
+    );
+  }, [allRows, currentPage]);
+
+  // สร้าง chartData จากข้อมูลจริง
+  const chartData = useMemo(() => {
+    // คำนวณจำนวนยานพาหนะแต่ละประเภทสำหรับทิศทางเข้า
+    const carIn = data.reduce((sum, camera) => 
+      sum + (camera.details.find(d => 
+        d.vehicle_type_name === "car" && d.direction_type_name === "in"
+      )?.count || 0), 0
+    );
+    
+    const motorcycleIn = data.reduce((sum, camera) => 
+      sum + (camera.details.find(d => 
+        d.vehicle_type_name === "motorcycle" && d.direction_type_name === "in"
+      )?.count || 0), 0
+    );
+    
+    const busIn = data.reduce((sum, camera) => 
+      sum + (camera.details.find(d => 
+        d.vehicle_type_name === "bus" && d.direction_type_name === "in"
+      )?.count || 0), 0
+    );
+
+    // คำนวณจำนวนยานพาหนะแต่ละประเภทสำหรับทิศทางออก
+    const carOut = data.reduce((sum, camera) => 
+      sum + (camera.details.find(d => 
+        d.vehicle_type_name === "car" && d.direction_type_name === "out"
+      )?.count || 0), 0
+    );
+    
+    const motorcycleOut = data.reduce((sum, camera) => 
+      sum + (camera.details.find(d => 
+        d.vehicle_type_name === "motorcycle" && d.direction_type_name === "out"
+      )?.count || 0), 0
+    );
+    
+    const busOut = data.reduce((sum, camera) => 
+      sum + (camera.details.find(d => 
+        d.vehicle_type_name === "bus" && d.direction_type_name === "out"
+      )?.count || 0), 0
+    );
+
+    return {
+      labels: ["รถยนต์", "จักรยานยนต์", "รถบัส"],
+      datasets: [
+        {
+          label: "เข้า",
+          data: [carIn, motorcycleIn, busIn],
+          backgroundColor: "#3b82f6",
+        },
+        {
+          label: "ออก", 
+          data: [carOut, motorcycleOut, busOut],
+          backgroundColor: "#ef4444",
+        },
+      ],
+    };
+  }, [data]);
 
   const chartOptions = {
     responsive: true,
@@ -171,8 +242,7 @@ export default function VehicleDashboard() {
       )?.count || 0),
     0
   );
-
-  // ✅ ใส่ return ครอบ JSX
+  
   return (
     <div>
       {/* Content */}
@@ -435,7 +505,7 @@ export default function VehicleDashboard() {
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-4 mt-6">
             <button
-              onClick={() => setCurrentPage((p: number) => Math.max(1, p - 1))}
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
               className="px-4 py-2 rounded bg-orange-400 text-white font-bold shadow hover:bg-orange-500 disabled:opacity-50"
             >
@@ -445,9 +515,7 @@ export default function VehicleDashboard() {
               หน้า {currentPage} / {totalPages}
             </span>
             <button
-              onClick={() =>
-                setCurrentPage((p: number) => Math.min(totalPages, p + 1))
-              }
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
               className="px-4 py-2 rounded bg-orange-400 text-white font-bold shadow hover:bg-orange-500 disabled:opacity-50"
             >
