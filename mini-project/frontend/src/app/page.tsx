@@ -12,7 +12,14 @@ import {
   Legend,
 } from "chart.js";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface VehicleDetail {
   vehicle_type_id: number;
@@ -45,15 +52,15 @@ export default function VehicleDashboard() {
 
   // แปลงข้อมูลสำหรับตาราง
   const allRows = useMemo(() => {
-    return data.flatMap(camera => 
-      camera.details.map(detail => ({
+    return data.flatMap((camera) =>
+      camera.details.map((detail) => ({
         camera_id: camera.camera_id,
         gate_id: camera.gate_id,
         vehicle_type_id: detail.vehicle_type_id,
         vehicle_type_name: detail.vehicle_type_name,
         direction_type_id: detail.direction_type_id,
         direction_type_name: detail.direction_type_name,
-        count: detail.count
+        count: detail.count,
       }))
     );
   }, [data]);
@@ -73,41 +80,65 @@ export default function VehicleDashboard() {
   // สร้าง chartData จากข้อมูลจริง
   const chartData = useMemo(() => {
     // คำนวณจำนวนยานพาหนะแต่ละประเภทสำหรับทิศทางเข้า
-    const carIn = data.reduce((sum, camera) => 
-      sum + (camera.details.find(d => 
-        d.vehicle_type_name === "car" && d.direction_type_name === "in"
-      )?.count || 0), 0
+    const carIn = data.reduce(
+      (sum, camera) =>
+        sum +
+        (camera.details.find(
+          (d) => d.vehicle_type_name === "car" && d.direction_type_name === "in"
+        )?.count || 0),
+      0
     );
-    
-    const motorcycleIn = data.reduce((sum, camera) => 
-      sum + (camera.details.find(d => 
-        d.vehicle_type_name === "motorcycle" && d.direction_type_name === "in"
-      )?.count || 0), 0
+
+    const motorcycleIn = data.reduce(
+      (sum, camera) =>
+        sum +
+        (camera.details.find(
+          (d) =>
+            d.vehicle_type_name === "motorcycle" &&
+            d.direction_type_name === "in"
+        )?.count || 0),
+      0
     );
-    
-    const busIn = data.reduce((sum, camera) => 
-      sum + (camera.details.find(d => 
-        d.vehicle_type_name === "bus" && d.direction_type_name === "in"
-      )?.count || 0), 0
+
+    const busIn = data.reduce(
+      (sum, camera) =>
+        sum +
+        (camera.details.find(
+          (d) => d.vehicle_type_name === "bus" && d.direction_type_name === "in"
+        )?.count || 0),
+      0
     );
 
     // คำนวณจำนวนยานพาหนะแต่ละประเภทสำหรับทิศทางออก
-    const carOut = data.reduce((sum, camera) => 
-      sum + (camera.details.find(d => 
-        d.vehicle_type_name === "car" && d.direction_type_name === "out"
-      )?.count || 0), 0
+    const carOut = data.reduce(
+      (sum, camera) =>
+        sum +
+        (camera.details.find(
+          (d) =>
+            d.vehicle_type_name === "car" && d.direction_type_name === "out"
+        )?.count || 0),
+      0
     );
-    
-    const motorcycleOut = data.reduce((sum, camera) => 
-      sum + (camera.details.find(d => 
-        d.vehicle_type_name === "motorcycle" && d.direction_type_name === "out"
-      )?.count || 0), 0
+
+    const motorcycleOut = data.reduce(
+      (sum, camera) =>
+        sum +
+        (camera.details.find(
+          (d) =>
+            d.vehicle_type_name === "motorcycle" &&
+            d.direction_type_name === "out"
+        )?.count || 0),
+      0
     );
-    
-    const busOut = data.reduce((sum, camera) => 
-      sum + (camera.details.find(d => 
-        d.vehicle_type_name === "bus" && d.direction_type_name === "out"
-      )?.count || 0), 0
+
+    const busOut = data.reduce(
+      (sum, camera) =>
+        sum +
+        (camera.details.find(
+          (d) =>
+            d.vehicle_type_name === "bus" && d.direction_type_name === "out"
+        )?.count || 0),
+      0
     );
 
     return {
@@ -117,11 +148,17 @@ export default function VehicleDashboard() {
           label: "เข้า",
           data: [carIn, motorcycleIn, busIn],
           backgroundColor: "#3b82f6",
+          borderRadius: 10, // ทำให้ bar โค้งมนเต็มความสูง
+          barPercentage: 1, // ให้เต็มช่อง category
+          categoryPercentage: 0.6, // ช่องว่างระหว่าง category
         },
         {
-          label: "ออก", 
+          label: "ออก",
           data: [carOut, motorcycleOut, busOut],
-          backgroundColor: "#ef4444",
+          backgroundColor: "#ec4899",
+          borderRadius: 10,
+          barPercentage: 1,
+          categoryPercentage: 0.6,
         },
       ],
     };
@@ -131,7 +168,70 @@ export default function VehicleDashboard() {
     responsive: true,
     plugins: {
       legend: {
-        position: "top" as const,
+        position: "bottom" as const,
+        labels: {
+          font: { size: 16, family: "Prompt, sans-serif" },
+          color: "#22223b",
+          boxWidth: 20,
+          boxHeight: 14,
+        },
+      },
+      title: {
+        display: true,
+        text: "สถิติจำนวนยานพาหนะเข้าออกแต่ละประเภท",
+        font: {
+          size: 20,
+          family: "Prompt, sans-serif",
+          weight: "bold" as "bold",
+        },
+        color: "#22223b",
+        padding: { top: 10, bottom: 10 },
+      },
+      tooltip: {
+        backgroundColor: "#fff",
+        titleColor: "#22223b",
+        bodyColor: "#22223b",
+        borderColor: "#a5b4fc",
+        borderWidth: 1,
+        titleFont: { family: "Prompt, sans-serif", size: 14 },
+        bodyFont: { family: "Prompt, sans-serif", size: 14 },
+        padding: 10,
+        cornerRadius: 6,
+        mode: "index" as const,
+        intersect: false,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          stepSize: 1,
+          font: { size: 14, family: "Prompt, sans-serif" },
+          color: "#22223b",
+        },
+        title: {
+          display: true,
+          text: "จำนวน (คัน)",
+          font: { size: 16, family: "Prompt, sans-serif" },
+          color: "#22223b",
+        },
+        grid: {
+          color: "rgba(0,0,0,0.05)",
+          borderDash: [3, 3],
+        },
+      },
+      x: {
+        ticks: {
+          font: { size: 14, family: "Prompt, sans-serif" },
+          color: "#22223b",
+        },
+        title: {
+          display: true,
+          text: "ประเภทยานพาหนะ",
+          font: { size: 16, family: "Prompt, sans-serif" },
+          color: "#22223b",
+        },
+        grid: { display: false },
       },
     },
   };
@@ -203,12 +303,10 @@ export default function VehicleDashboard() {
     (sum, camera) =>
       sum +
       (camera.details.find(
-        (d) =>
-          d.vehicle_type_name === "car" && d.direction_type_name === "in"
+        (d) => d.vehicle_type_name === "car" && d.direction_type_name === "in"
       )?.count || 0) +
       (camera.details.find(
-        (d) =>
-          d.vehicle_type_name === "car" && d.direction_type_name === "out"
+        (d) => d.vehicle_type_name === "car" && d.direction_type_name === "out"
       )?.count || 0),
     0
   );
@@ -218,8 +316,7 @@ export default function VehicleDashboard() {
       sum +
       (camera.details.find(
         (d) =>
-          d.vehicle_type_name === "motorcycle" &&
-          d.direction_type_name === "in"
+          d.vehicle_type_name === "motorcycle" && d.direction_type_name === "in"
       )?.count || 0) +
       (camera.details.find(
         (d) =>
@@ -233,16 +330,14 @@ export default function VehicleDashboard() {
     (sum, camera) =>
       sum +
       (camera.details.find(
-        (d) =>
-          d.vehicle_type_name === "bus" && d.direction_type_name === "in"
+        (d) => d.vehicle_type_name === "bus" && d.direction_type_name === "in"
       )?.count || 0) +
       (camera.details.find(
-        (d) =>
-          d.vehicle_type_name === "bus" && d.direction_type_name === "out"
+        (d) => d.vehicle_type_name === "bus" && d.direction_type_name === "out"
       )?.count || 0),
     0
   );
-  
+
   return (
     <div>
       {/* Content */}
@@ -515,7 +610,9 @@ export default function VehicleDashboard() {
               หน้า {currentPage} / {totalPages}
             </span>
             <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
               disabled={currentPage === totalPages}
               className="px-4 py-2 rounded bg-orange-400 text-white font-bold shadow hover:bg-orange-500 disabled:opacity-50"
             >
