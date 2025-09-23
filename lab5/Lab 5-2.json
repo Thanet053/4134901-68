@@ -1,0 +1,287 @@
+{
+  "name": "Lab 5-2",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT employee_name, product_name, price, quantity, sale_date FROM sales WHERE sale_date = CURRENT_DATE;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        624,
+        384
+      ],
+      "id": "ffe438fa-5be6-4e0a-9992-4a26ce6a0f97",
+      "name": "Get Sales Data",
+      "credentials": {
+        "mySql": {
+          "id": "b9b3S8RszBsNxZYS",
+          "name": "MariaDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\n\nlet totalSales = 0;\nlet productMap = {};\nlet employeeMap = {};\n\nrows.forEach(r => {\n  const amount = r.price * r.quantity;\n  totalSales += amount;\n\n  // นับยอดตามสินค้า\n  if (!productMap[r.product_name]) productMap[r.product_name] = 0;\n  productMap[r.product_name] += amount;\n\n  // นับยอดตามพนักงาน\n  if (!employeeMap[r.employee_name]) employeeMap[r.employee_name] = 0;\n  employeeMap[r.employee_name] += amount;\n});\n\n// หาสินค้าขายดี\nlet bestProduct = Object.entries(productMap).sort((a,b) => b[1]-a[1])[0] || [\"-\",0];\n\n// หาพนักงานทำยอดสูงสุด\nlet bestEmployee = Object.entries(employeeMap).sort((a,b) => b[1]-a[1])[0] || [\"-\",0];\n\nreturn [{\n  json: {\n    total_sales: totalSales.toFixed(2),\n    best_product: bestProduct[0],\n    best_product_sales: bestProduct[1].toFixed(2),\n    best_employee: bestEmployee[0],\n    best_employee_sales: bestEmployee[1].toFixed(2),\n    rows\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        384
+      ],
+      "id": "988b9589-7df7-4477-a7e2-73dbef0d36e6",
+      "name": "Process Sales Data"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=คุณเป็นผู้ช่วยวิเคราะห์ยอดขาย กรุณาเขียนรายงานสรุป:\n- ยอดขายรวม {{ $json.total_sales }} บาท\n- สินค้าขายดีที่สุดคือ {{ $json.best_product }} ({{ $json.best_product_sales }} บาท)\n- พนักงานที่ทำยอดได้สูงสุดคือ {{ $json.best_employee }} ({{ $json.best_employee_sales }} บาท)\n\nเขียนรายงานให้สวยงาม เหมาะสมสำหรับผู้บริหาร",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        992,
+        384
+      ],
+      "id": "48ab6122-4120-4bad-8f81-d63a21b5acd7",
+      "name": "AI Generate Report"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-3.5-turbo",
+        "options": {
+          "maxTokens": 1500,
+          "temperature": 0.4
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        976,
+        560
+      ],
+      "id": "433eb39f-9f46-412c-9910-833cac65a85b",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "urZj4DKoQlYRF7k8",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const today = new Date();\nconst day = String(today.getDate()).padStart(2,'0');\nconst month = String(today.getMonth()+1).padStart(2,'0');\nconst year = today.getFullYear();\nconst fileName = `${day}-${month}-${year}.docx`;\n\nconst aiOutput = $input.first().json.output || $input.first().json.response || $input.first().json.text || \"รายงานว่างเปล่า\";\n\nreturn [{\n  json: {\n    fileName,\n    content: aiOutput\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1280,
+        384
+      ],
+      "id": "c79b49d9-9917-41c9-9b75-0db950be0e90",
+      "name": "Prepare DOCX"
+    },
+    {
+      "parameters": {
+        "folderId": "1aVtMw7fAI06KHWvlmh-jxoy-42dpGyjT",
+        "title": "={{ $json.fileName }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1472,
+        384
+      ],
+      "id": "eacef640-005e-4373-9c02-4e248d32f8cc",
+      "name": "Create Report to Daily",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "6zqTp5iwMISDzMFr",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Prepare DOCX').item.json.content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1856,
+        384
+      ],
+      "id": "43baeb0c-c251-48fc-b4a6-d5e7a0aa5e59",
+      "name": "Data Report",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "6zqTp5iwMISDzMFr",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        448,
+        384
+      ],
+      "id": "7b03430a-0c80-4858-aef7-c90993b450c8",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1tOvnbKfMj9lAHmwRYNSgCVv_LFp23qDY",
+          "mode": "list",
+          "cachedResultName": "daily report",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1tOvnbKfMj9lAHmwRYNSgCVv_LFp23qDY"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1664,
+        384
+      ],
+      "id": "c5cfec04-eac0-430e-9a8c-7c659e93b908",
+      "name": "Move file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ILkWaMMhVd3gTmUd",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get Sales Data": {
+      "main": [
+        [
+          {
+            "node": "Process Sales Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Sales Data": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Generate Report",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate Report": {
+      "main": [
+        [
+          {
+            "node": "Prepare DOCX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare DOCX": {
+      "main": [
+        [
+          {
+            "node": "Create Report to Daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Report to Daily": {
+      "main": [
+        [
+          {
+            "node": "Move file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get Sales Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move file": {
+      "main": [
+        [
+          {
+            "node": "Data Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "711d7024-49a1-47fe-981c-6f66674aa33c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b88cc5fd85709ffe33d9b31950741e30a799267a90a4d7be0cc43021d42c8434"
+  },
+  "id": "qCLoV9fDA0pg0lmy",
+  "tags": []
+}

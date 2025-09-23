@@ -1,0 +1,394 @@
+{
+  "name": "Lab 5-1",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "return $input.all()\n  // เอาเฉพาะไฟล์ที่เป็น Google Docs (mimeType) หรือไฟล์ .docx\n  .filter(item => \n    item.json.mimeType === \"application/vnd.google-apps.document\" || \n    item.json.fileExtension === \"docx\" ||\n    (item.json.name && item.json.name.toLowerCase().endsWith('.docx'))\n  )\n  .map(item => {\n    const link = item.json.webViewLink || \"\";\n    const match = link.match(/\\/d\\/([a-zA-Z0-9-_]+)/);\n    const documentId = match ? match[1] : item.json.id;\n\n    return {\n      json: {\n        fileName: item.json.originalFilename || item.json.name,\n        fileId: item.json.id,\n        link,\n        document_id: documentId,\n        created: item.json.createdTime,\n        mimeType: item.json.mimeType\n      }\n    };\n  });"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        224
+      ],
+      "id": "508d3bc7-dd0c-4539-8f0d-20d8ae733ad5",
+      "name": "Extract Document ID"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "={{ $json.document_id }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        -112,
+        16
+      ],
+      "id": "0c0899be-120c-4b35-832c-9d29969153c4",
+      "name": "Get Google Docs Content",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "6zqTp5iwMISDzMFr",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        80,
+        208
+      ],
+      "id": "3ae1d9b8-0b41-4464-be6b-2afeb57e7542",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=คุณเป็นผู้เชี่ยวชาญแก้ไขเอกสารไทย กรุณา:\n1. แก้ไข: คำผิด, ไวยากรณ์, เครื่องหมายวรรคตอน\n2. สรุปเนื้อหาหลัก\n\nเนื้อหา: {{ $json.draft }}\n\nตอบแบบ JSON:\n{\n  \"reviewed_content\": \"เนื้อหาที่แก้แล้ว\",\n  \"summary\": \"สรุป\"\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        480,
+        208
+      ],
+      "id": "cb683e18-0465-4e54-bebd-98396f554821",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-3.5-turbo",
+        "options": {
+          "maxTokens": 2000,
+          "temperature": 0.3,
+          "topP": 0.8
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        448,
+        384
+      ],
+      "id": "7ccce230-8cb2-4d61-bf8f-0bcf9fed71fc",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "urZj4DKoQlYRF7k8",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1Vv2lSdd3fJmwJJNhYycXCStA2Rc_hAAu",
+          "mode": "list",
+          "cachedResultName": "draft",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1Vv2lSdd3fJmwJJNhYycXCStA2Rc_hAAu"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        -544,
+        224
+      ],
+      "id": "f731d1b4-98c0-4142-93d9-20f5c2f6c8b6",
+      "name": "Monitor Draft Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ILkWaMMhVd3gTmUd",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const contentNode = $input.all().find(i => i.json.content);\nconst metaNode = $input.all().find(i => i.json.fileName);\n\nif (!contentNode || !metaNode) {\n  return [];\n}\n\nreturn [{\n  json: {\n    document_id: metaNode.json.document_id,\n    file_name: metaNode.json.fileName,      \n    draft: contentNode.json.content,\n    file_id: metaNode.json.fileId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        208
+      ],
+      "id": "f25c7175-5045-494c-876d-a557757cb1ff",
+      "name": "Prepare Data for AI"
+    },
+    {
+      "parameters": {
+        "jsCode": "// รับผลจาก AI และแยก reviewed กับ summary\nconst aiResponse = $input.first().json.response || $input.first().json.text || $input.first().json.output;\n\nlet reviewedContent = \"\";\nlet summary = \"\";\n\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    const parsed = JSON.parse(jsonMatch[0]);\n    reviewedContent = parsed.reviewed_content || aiResponse;\n    summary = parsed.summary || \"ไม่สามารถสรุปได้\";\n  } else {\n    reviewedContent = aiResponse;\n    summary = \"เอกสารได้รับการตรวจสอบแล้ว\";\n  }\n} catch (error) {\n  reviewedContent = aiResponse;\n  summary = \"เกิดข้อผิดพลาดในการแปลงข้อมูล: \" + error.message;\n}\n\nreturn [{\n  json: {\n    document_id: $('Prepare Data for AI').first().json.document_id,\n    file_name: $('Prepare Data for AI').first().json.file_name,\n    original_content: $('Prepare Data for AI').first().json.draft,\n    reviewed_content: reviewedContent,\n    summary: summary,\n    file_id: $('Prepare Data for AI').first().json.file_id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        208
+      ],
+      "id": "eaaa45c8-3da5-4011-85c7-f31d94bc8254",
+      "name": "Process AI Response"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO documents (document_id, file_name, draft, reviewed, summary)\nVALUES (\n  '{{ $json.document_id }}', \n  '{{ $json.file_name }}', \n  '{{ $json.original_content }}',\n  '{{ $json.reviewed_content }}',\n  '{{ $json.summary }}'\n)\nON DUPLICATE KEY UPDATE\n  draft = VALUES(draft),\n  reviewed = VALUES(reviewed),\n  summary = VALUES(summary),\n  updated_at = CURRENT_TIMESTAMP;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        960,
+        208
+      ],
+      "id": "b8c37fec-9ca1-492a-a4e2-9c64cb1ab80c",
+      "name": "Save to Database",
+      "credentials": {
+        "mySql": {
+          "id": "b9b3S8RszBsNxZYS",
+          "name": "MariaDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "1aVtMw7fAI06KHWvlmh-jxoy-42dpGyjT",
+        "title": "={{ $('Process AI Response').item.json.file_name }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        208
+      ],
+      "id": "5ba1ac8e-963c-4c79-a0ea-0c30680d2745",
+      "name": "Create Reviewed Document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "6zqTp5iwMISDzMFr",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Process AI Response').item.json.reviewed_content }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        208
+      ],
+      "id": "e4f8d116-0bad-4bae-a849-eba903add1ea",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "6zqTp5iwMISDzMFr",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1dStGqj5fra49t6sRUapV6CegtDQuBjxo",
+          "mode": "list",
+          "cachedResultName": "reviewed",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1dStGqj5fra49t6sRUapV6CegtDQuBjxo"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1328,
+        208
+      ],
+      "id": "9740b86a-e918-46ef-b03b-7bfaecdbea41",
+      "name": "Move file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ILkWaMMhVd3gTmUd",
+          "name": "Google Drive account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Extract Document ID": {
+      "main": [
+        [
+          {
+            "node": "Get Google Docs Content",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Get Google Docs Content": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data for AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Process AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Monitor Draft Folder": {
+      "main": [
+        [
+          {
+            "node": "Extract Document ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data for AI": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process AI Response": {
+      "main": [
+        [
+          {
+            "node": "Save to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Database": {
+      "main": [
+        [
+          {
+            "node": "Create Reviewed Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Reviewed Document": {
+      "main": [
+        [
+          {
+            "node": "Move file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move file": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6489ca2b-8ae4-4dd8-864a-9176a7ff3100",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b88cc5fd85709ffe33d9b31950741e30a799267a90a4d7be0cc43021d42c8434"
+  },
+  "id": "uXpF2dO6PRTY8wj4",
+  "tags": []
+}
