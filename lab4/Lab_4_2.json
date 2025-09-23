@@ -1,0 +1,351 @@
+{
+  "name": "Lab 4-2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        940,
+        360
+      ],
+      "id": "f74a10a0-91b0-4bd9-81af-de964b76c536",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "web",
+          "mode": "list",
+          "cachedResultName": "web"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1160,
+        360
+      ],
+      "id": "78042bc5-be87-4a24-a871-51ca2cb88959",
+      "name": "MySQL2",
+      "credentials": {
+        "mySql": {
+          "id": "sRVVAMSXRSFeK5Er",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.line.me/v2/bot/message/push",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{\n  \"Content-Type\": \"application/json\",\n  \"Authorization\": \"Bearer cNmmjad2HagTjhw5fvniB7vBFwfOPhLG6O+ze8eOxhtd/2o2kX0aP+KBSw5Z0D7d9s5f5OqptG/JOuz1uFGwoDmOsvktnlAl6Ylv4+ZCg6C7FumZq4r8Swo84JQEa7yyepcCyJkRyKb9Km7VBPwihQdB04t89/1O/w1cDnyilFU=\"\n}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"to\": \"Uc4c632acc5e3196135132cc95c5169ca\",\n  \"messages\": [\n    {\n      \"type\": \"text\",\n      \"text\": \"🌐 เว็บไซต์ {{ $json.url }} ||status: {{ $json.status }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        360
+      ],
+      "id": "7e8e1641-d9b3-4e24-9705-56025034b54f",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "66YfHH1Z0ZlEkVKU",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": {
+          "__rl": true,
+          "value": "web",
+          "mode": "list",
+          "cachedResultName": "web"
+        },
+        "dataMode": "defineBelow",
+        "columnToMatchOn": "url",
+        "valueToMatchOn": "={{ $json.url }}",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "last_check",
+              "value": "={{ $json.timestamp }}"
+            },
+            {
+              "column": "status",
+              "value": "={{ $json.statusCode }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1380,
+        540
+      ],
+      "id": "53fa72e1-1a4b-450e-82b8-df76426e9b9e",
+      "name": "MySQL1",
+      "credentials": {
+        "mySql": {
+          "id": "sRVVAMSXRSFeK5Er",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        940,
+        540
+      ],
+      "id": "f23f0935-d39a-4f90-a160-3e820c5402ee",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b21f69af-7759-4857-b515-3614b6e808ae",
+              "name": "timestamp",
+              "value": "= {{ DateTime.fromISO($('Schedule Trigger1').item.json.timestamp).setZone(\"Asia/Bangkok\").toFormat(\"yyyy-MM-dd HH:mm:ss\") }}",
+              "type": "string"
+            },
+            {
+              "id": "d40c505c-efd7-41ab-9f1e-b0541a2e794b",
+              "name": "url",
+              "value": "={{ $('MySQL3').item.json.url }}",
+              "type": "string"
+            },
+            {
+              "id": "9a95f985-7e5a-465a-bef5-bbbd6d6579f4",
+              "name": "statusCode",
+              "value": "={{ $json.statusCode }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1160,
+        540
+      ],
+      "id": "15318a2a-5a2b-4a2f-803c-1d1e4c7a2c80",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        280,
+        460
+      ],
+      "id": "be7ae349-8921-4344-b903-ef1f67e830b2",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "table": {
+          "__rl": true,
+          "value": "web",
+          "mode": "list",
+          "cachedResultName": "web"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        500,
+        460
+      ],
+      "id": "9de92042-af33-4f44-9650-9bcc3f7fc49b",
+      "name": "MySQL3",
+      "credentials": {
+        "mySql": {
+          "id": "sRVVAMSXRSFeK5Er",
+          "name": "MySQL account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        720,
+        460
+      ],
+      "id": "773690c7-fe8f-42a1-8b94-e522c9d635c1",
+      "name": "Loop Over Items1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "line",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        280,
+        280
+      ],
+      "id": "6f07ed78-95ab-4a1d-8b38-6dfe4fa53d21",
+      "name": "Webhook",
+      "webhookId": "32bec927-714f-4d6d-9938-01cf40ab5d4b"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "MySQL2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "MySQL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "MySQL3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MySQL3": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items1": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b8a1068a-2f0f-41e3-ac31-9078825a8adb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a839bafd58d79510da4d82085b815701590572d2080e9fbd737555bd0708cbb4"
+  },
+  "id": "RbzqobB3o6gAH8Qt",
+  "tags": []
+}

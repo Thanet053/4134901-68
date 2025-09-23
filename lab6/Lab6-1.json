@@ -1,0 +1,644 @@
+{
+  "name": "ProEx-ENG",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -656,
+        144
+      ],
+      "id": "c8872076-a6d2-45cb-9a30-955e6d79684a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH s7 AS (\n  SELECT product_id, SUM(quantity) AS sales_last_7_days\n  FROM sales\n  WHERE sale_date >= CURDATE() - INTERVAL 7 DAY\n  GROUP BY product_id\n)\nSELECT\n  p.id AS product_id,\n  p.name,\n  p.stock,\n  COALESCE(s7.sales_last_7_days, 0) AS sales_last_7_days\nFROM products p\nLEFT JOIN s7 ON s7.product_id = p.id\nORDER BY p.id;\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -368,
+        -208
+      ],
+      "id": "28a5dc77-5055-4c50-962e-62b60bdc5dea",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "mySql": {
+          "id": "gnwTxaQD6VMPapGb",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "650112418050@bru.ac.th",
+        "subject": "รายงานคาดการณ์สินค้าคงคลัง",
+        "message": "=สวัสดีครับ,<br><br>\n\nระบบติดตามและคาดการณ์สินค้าคงคลังได้ทำการอัปเดตรายงานประจำสัปดาห์เรียบร้อยแล้ว<br>\nรายงานนี้ประกอบด้วย:<br>\n- สรุปสถานะสต็อกปัจจุบัน<br>\n- คาดการณ์สินค้าที่มีแนวโน้มจะหมดในสัปดาห์หน้า<br>\n- คำแนะนำการสั่งซื้อเพิ่มเติม<br>\n- กราฟแนวโน้มการขายย้อนหลัง<br><br>\n\n📊 <a href=\"https://drive.google.com/file/d/1TtrU_hiKbFVcbLRcDcOZ7D-qxgcs9Wm8/view?usp=drivesdk\">คลิกที่นี่เพื่อเปิดรายงาน</a>\n\nหากมีข้อสงสัยหรือต้องการข้อมูลเพิ่มเติม กรุณาติดต่อฝ่ายคลังสินค้าได้โดยตรง<br><br>\n\nขอบคุณครับ,<br>\nระบบติดตามและคาดการณ์สินค้าคงคลังอัตโนมัติ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        672,
+        80
+      ],
+      "id": "f7a3e639-b94b-48a4-8abf-4c10b741c303",
+      "name": "Send a message",
+      "webhookId": "bce37b34-4f3b-43e8-878c-34d4e09f0668",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "R8JJblkIZwUTXZci",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "1jkOJ35WJ4nRfTfT5Av-WbiwD1i1HR50X2-FUP1leoHs",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "sheetsToFormat": "application/pdf"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        480,
+        16
+      ],
+      "id": "d1dc2878-ab42-42dd-bc37-22763a4cff3a",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "7fh1vfFiLJAV1gXL",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1jkOJ35WJ4nRfTfT5Av-WbiwD1i1HR50X2-FUP1leoHs",
+          "mode": "list",
+          "cachedResultName": "n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jkOJ35WJ4nRfTfT5Av-WbiwD1i1HR50X2-FUP1leoHs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jkOJ35WJ4nRfTfT5Av-WbiwD1i1HR50X2-FUP1leoHs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_id": "={{$json[\"product_id\"]}}",
+            "name": "={{$json[\"name\"]}}",
+            "stock": "={{$json[\"stock\"]}}",
+            "sales_last_7_days": "={{$json[\"sales_last_7_days\"]}}",
+            "forecast_sales_next_7": "={{$json[\"forecast_sales_next_7\"]}}",
+            "stock_after_7": "={{$json[\"stock_after_7\"]}}",
+            "explanation": "={{ $json.explanation }}",
+            "recommendation_detail": "={{ $json.recommendation_detail }}",
+            "recommendation": "={{ $json.recommendation }}",
+            "out_of_stock": "={{ $json.out_of_stock }}"
+          },
+          "matchingColumns": [
+            "product_id"
+          ],
+          "schema": [
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stock",
+              "displayName": "stock",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sales_last_7_days",
+              "displayName": "sales_last_7_days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "forecast_sales_next_7",
+              "displayName": "forecast_sales_next_7",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "stock_after_7",
+              "displayName": "stock_after_7",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "out_of_stock",
+              "displayName": "out_of_stock",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "recommendation",
+              "displayName": "recommendation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "recommendation_detail",
+              "displayName": "recommendation_detail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "explanation",
+              "displayName": "explanation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "2c4b5aba-c3be-4a5e-b047-2795c6990bb1",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5e6mczvjOMJgVoQU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -672,
+        -208
+      ],
+      "id": "d330f7f2-5b8a-4108-b26c-90a4060170f7",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "jsCode": "// บังคับให้เหลือแค่ 1 item ก่อนส่งต่อ\nreturn [items[0]];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        16
+      ],
+      "id": "075515c5-21d0-41cb-9725-354dd3793a82",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1jkOJ35WJ4nRfTfT5Av-WbiwD1i1HR50X2-FUP1leoHs",
+          "mode": "list",
+          "cachedResultName": "n8n",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jkOJ35WJ4nRfTfT5Av-WbiwD1i1HR50X2-FUP1leoHs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 174413567,
+          "mode": "list",
+          "cachedResultName": "trend",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1jkOJ35WJ4nRfTfT5Av-WbiwD1i1HR50X2-FUP1leoHs/edit#gid=174413567"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{$json[\"date\"]}}",
+            "product_id": "={{$json[\"product_id\"]}}",
+            "name": "={{$json[\"name\"]}}",
+            "qty": "={{$json[\"qty\"]}}",
+            "key": "={{$json[\"date\"]}}_{{$json[\"product_id\"]}}"
+          },
+          "matchingColumns": [
+            "key"
+          ],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "product_id",
+              "displayName": "product_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "qty",
+              "displayName": "qty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "key",
+              "displayName": "key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -160,
+        144
+      ],
+      "id": "91dea67d-8253-449d-8137-e6ae4683194f",
+      "name": "Append time series to 'trend'",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "5e6mczvjOMJgVoQU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  p.id AS product_id,\n  p.name,\n  DATE(s.sale_date) AS date,\n  SUM(s.quantity) AS qty\nFROM products p\nJOIN sales s ON s.product_id = p.id\nWHERE s.sale_date >= CURDATE() - INTERVAL 30 DAY\nGROUP BY p.id, p.name, DATE(s.sale_date)\nORDER BY p.id, DATE(s.sale_date);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.5,
+      "position": [
+        -368,
+        144
+      ],
+      "id": "7cb3b516-ae76-446d-8f68-b34a408819b8",
+      "name": "Sales time series 30d",
+      "credentials": {
+        "mySql": {
+          "id": "gnwTxaQD6VMPapGb",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        160,
+        128
+      ],
+      "id": "46506b66-a662-4c35-a363-10e32887a575",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "fileId": {
+          "__rl": true,
+          "value": "1TtrU_hiKbFVcbLRcDcOZ7D-qxgcs9Wm8",
+          "mode": "list",
+          "cachedResultName": "Report",
+          "cachedResultUrl": "https://drive.google.com/file/d/1TtrU_hiKbFVcbLRcDcOZ7D-qxgcs9Wm8/view?usp=drivesdk"
+        },
+        "changeFileContent": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        672,
+        -112
+      ],
+      "id": "3244a5ec-5c20-4c12-a5d1-1a68a76e2231",
+      "name": "Update file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "7fh1vfFiLJAV1gXL",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function toObj(raw) {\n  if (raw == null) throw new Error(\"LLM output is null/undefined\");\n  let s = raw;\n\n  if (typeof s === \"object\") return s;\n  s = String(s).trim();\n\n  // ลบ code fences\n  s = s.replace(/^```json/i, \"\")\n       .replace(/^```/, \"\")\n       .replace(/```$/, \"\")\n       .trim();\n\n  // ลบคอมเมนต์แบบ JS // หรือ /* */\n  s = s.replace(/\\/\\/.*$/gm, \"\").replace(/\\/\\*[\\s\\S]*?\\*\\//g, \"\");\n\n  // เปลี่ยน single quotes → double quotes รอบ key และค่า\n  // key: 'value' → \"key\": \"value\"\n  s = s.replace(/'([^']*)'\\s*:/g, '\"$1\":');   // keys\n  s = s.replace(/:\\s*'([^']*)'/g, ':\"$1\"');   // values\n\n  // ลบ \\n, \\r\n  s = s.replace(/\\r?\\n+/g, \" \");\n\n  // แก้ ,} หรือ ,]\n  s = s.replace(/,(\\s*[}\\]])/g, \"$1\");\n\n  // หา block JSON\n  const m = s.match(/\\{[\\s\\S]*\\}/);\n  if (!m) throw new Error(\"Unable to find JSON object in LLM output: \" + s);\n\n  try {\n    return JSON.parse(m[0]);\n  } catch (e) {\n    console.error(\"❌ Still invalid JSON after cleanup:\", s);\n    throw e;\n  }\n}\n\nreturn items.map(it => {\n  const raw = it.json?.output ?? it.json?.text ?? it.json;\n  const o = toObj(raw);\n\n  const out = {\n    product_id: Number(o.product_id),\n    name: String(o.name ?? ''),\n    stock: Number(o.stock),\n    sales_last_7_days: Number(o.sales_last_7_days),\n    forecast_sales_next_7: Number(o.forecast_sales_next_7),\n    stock_after_7: Number(o.stock_after_7),\n    out_of_stock: String(o.out_of_stock ?? ''),\n    recommendation: String(o.recommendation ?? ''),\n    recommendation_detail: String(o.recommendation_detail ?? ''),\n    explanation: String(o.explanation ?? '')\n  };\n\n  return { json: out };\n  \n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -208
+      ],
+      "id": "2b522241-feb5-413a-8ede-c42b053ef9e7",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-4o-mini",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -256,
+        -16
+      ],
+      "id": "038bf1db-bd42-4ee6-8888-2e690158f9ba",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "uoliWt0f7mFvLn9y",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an inventory forecasting assistant.\n\nGiven ONE product row in valid JSON here:\n{{ JSON.stringify($json) }}\n\nRules:\n1) daily_avg_sales = sales_last_7_days / 7\n2) forecast_sales_next_7 = round(daily_avg_sales * 7)\n3) stock_after_7 = stock - forecast_sales_next_7\n4) out_of_stock = (stock_after_7 <= 0)\n5) recommendations:\n   - TH = \"ควรสั่งเพิ่ม\" if out_of_stock else \"ไม่จำเป็น\"\n6) lead_time_days = 5\n7) safety_stock = round(daily_avg_sales * lead_time_days * 0.7)\n8) order_up_to_level = round((daily_avg_sales * lead_time_days) + safety_stock + (daily_avg_sales * 7))\n9) reorder_qty = max(0, order_up_to_level - stock)\n10) recommendation_detail:\n   - TH = if reorder_qty > 0 → \"ควรสั่งซื้อเพิ่มจำนวน {reorder_qty} ชิ้น\" else \"ไม่จำเป็นต้องสั่งซื้อ\"\n11) explanation:\n   - TH = ให้เหตุผลสั้น ๆ ว่าทำไมถึง \"ควรสั่งเพิ่ม\" หรือ \"ไม่จำเป็น\"\n\nReturn ONLY RAW JSON (no code block/backticks, no explanation).\nThe JSON MUST contain EXACTLY these keys and types:\n\n{\n  \"product_id\": <number>,\n  \"name\": <string>,\n  \"stock\": <number>,\n  \"sales_last_7_days\": <number>,\n  \"forecast_sales_next_7\": <number>,\n  \"stock_after_7\": <number>,\n  \"out_of_stock\": \"หมดสต็อก\" | \"จะหมดสต็อก\" | \"มีสต็อก\",\n  \"recommendation\": \"ควรสั่งเพิ่ม\" | \"ไม่จำเป็น\",\n  \"lead_time_days\": <number>,\n  \"safety_stock\": <number>,\n  \"order_up_to_level\": <number>,\n  \"reorder_qty\": <number>,\n  \"recommendation_detail\": <string>,\n  \"explanation\": <string>\n}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -112,
+        -208
+      ],
+      "id": "00293f65-6b6a-4c2f-8b9c-e0818bcd4948",
+      "name": "AI Agent"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Sales time series 30d",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Update file",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Sales time series 30d",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append time series to 'trend'": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Sales time series 30d": {
+      "main": [
+        [
+          {
+            "node": "Append time series to 'trend'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5b7890e1-ce83-49f3-872c-8f9f56654017",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cc211eb132dc87ac21ebf2005b5f2fc8c93b7cf914f1e52c9305a0613ad8752f"
+  },
+  "id": "zr7X0afjZn8hLoHJ",
+  "tags": []
+}

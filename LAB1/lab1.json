@@ -1,0 +1,84 @@
+{
+  "name": "Lab 1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lab1_n8n",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "2ff97208-6878-45da-8051-ebfbd9050263",
+      "name": "Webhook",
+      "webhookId": "14490bc6-9f88-4098-8a65-1cfeb8a142fb"
+    },
+    {
+      "parameters": {
+        "jsCode": "const name = $input.first().json.body?.name || \"Guest\";\nreturn {\n  json: {\n    message: `Hello, ${name}! Welcome to n8n`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        -100
+      ],
+      "id": "809df781-7b7f-4efd-b057-b4a2e3260d06",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        -40
+      ],
+      "id": "fea1165d-27a0-4853-9de5-2bd02aa6970e",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5aa372fd-89b9-44fa-836d-b7d763add071",
+  "meta": {
+    "instanceId": "998a50b3917ba7c051ace4bc0011c91e68399421d5235c2e61ce741f10a10182"
+  },
+  "id": "sf1Uxebagd2PwxwW",
+  "tags": []
+}
