@@ -235,6 +235,54 @@ export default function VehicleDashboard() {
       },
     },
   };
+  const groupByDayAndType = (data: CameraData[]) => {
+    const daily: Record<
+      string,
+      { car: number; motorcycle: number; bus: number }
+    > = {};
+    data.forEach((camera) => {
+      const day = camera.start.slice(0, 10);
+      if (!daily[day]) {
+        daily[day] = { car: 0, motorcycle: 0, bus: 0 };
+      }
+      camera.details.forEach((d) => {
+        if (d.vehicle_type_name === "car") daily[day].car += d.count;
+        if (d.vehicle_type_name === "motorcycle")
+          daily[day].motorcycle += d.count;
+        if (d.vehicle_type_name === "bus") daily[day].bus += d.count;
+      });
+    });
+    return daily;
+  };
+
+  const dailyChartData = useMemo(() => {
+    const grouped = groupByDayAndType(data);
+    const days = Object.keys(grouped);
+
+    return {
+      labels: days,
+      datasets: [
+        {
+          label: "รถยนต์",
+          data: days.map((day) => grouped[day].car),
+          backgroundColor: "#3b82f6",
+          borderRadius: 8,
+        },
+        {
+          label: "จักรยานยนต์",
+          data: days.map((day) => grouped[day].motorcycle),
+          backgroundColor: "#10b981",
+          borderRadius: 8,
+        },
+        {
+          label: "รถบัส",
+          data: days.map((day) => grouped[day].bus),
+          backgroundColor: "#f59e0b",
+          borderRadius: 8,
+        },
+      ],
+    };
+  }, [data]);
 
   const fetchGateData = async (gateId: number) => {
     try {
@@ -623,6 +671,30 @@ export default function VehicleDashboard() {
       </div>
 
       {/* Vehicle Statistics Chart */}
+      {/* Daily Vehicle Statistics Chart */}
+      <div className="bg-white/80 rounded-3xl shadow-2xl p-12 mt-14 border border-green-100 max-w-5xl mx-auto w-full">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">
+          สถิติรายวันแยกตามประเภท
+        </h2>
+        <div style={{ height: 400 }}>
+          <Bar
+            data={dailyChartData}
+            options={{
+              responsive: true,
+              plugins: {
+                legend: { position: "bottom" },
+                title: {
+                  display: true,
+                  text: "จำนวนยานพาหนะต่อวัน (แยกประเภท)",
+                },
+              },
+              scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } },
+              },
+            }}
+          />
+        </div>
+      </div>
       <div
         className="bg-white/80 rounded-3xl shadow-2xl p-12 mt-14 border border-blue-100 max-w-5xl mx-auto w-full"
         style={{
